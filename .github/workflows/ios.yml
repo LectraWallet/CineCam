@@ -1,0 +1,42 @@
+name: CineCam — build IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'CineCam/**'
+      - 'CineCam.xcodeproj/**'
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Build (unsigned)
+        run: |
+          xcodebuild -project CineCam.xcodeproj \
+            -scheme CineCam \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -r "build/Build/Products/Release-iphoneos/CineCam.app" Payload/
+          zip -r CineCam-unsigned.ipa Payload
+          ls -lh CineCam-unsigned.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: CineCam-unsigned
+          path: CineCam-unsigned.ipa
